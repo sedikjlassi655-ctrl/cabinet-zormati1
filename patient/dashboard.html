@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mon Espace | Cabinet Zormati</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {50:'#f0f9ff',100:'#e0f2fe',500:'#0ea5e9',600:'#0284c7',700:'#0369a1'},
+            softpink: {50:'#fdf2f8',100:'#fce7f3',400:'#f472b6',500:'#ec4899'}
+          },
+          fontFamily: {sans:['Inter','system-ui','sans-serif'], display:['Playfair Display','serif']}
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 min-h-screen font-sans antialiased">
+  <nav class="bg-white border-b border-slate-100 sticky top-0 z-40">
+    <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+        </div>
+        <div>
+          <div class="font-semibold text-sm text-slate-900">Mon Espace</div>
+          <div class="text-xs text-slate-500" id="patient-name">—</div>
+        </div>
+      </div>
+      <button id="logout-btn" class="text-sm text-slate-500 hover:text-red-600 transition">Déconnexion</button>
+    </div>
+  </nav>
+
+  <main class="max-w-5xl mx-auto px-4 py-8">
+    <div class="bg-white rounded-3xl shadow-lg border border-slate-100 p-6 md:p-8 mb-8">
+      <div class="flex flex-col md:flex-row md:items-center gap-8">
+        <div class="flex-1">
+          <h1 class="font-display text-2xl font-bold text-slate-900 mb-1">Bonjour <span id="greet-name"></span> 👋</h1>
+          <p class="text-slate-500 text-sm mb-6">Voici l'état de votre parcours de soins</p>
+          <div class="grid grid-cols-3 gap-4">
+            <div class="text-center p-4 rounded-2xl bg-primary-50">
+              <div class="text-2xl font-bold text-primary-700" id="stat-total">0</div>
+              <div class="text-xs text-slate-500 mt-1">Séances totales</div>
+            </div>
+            <div class="text-center p-4 rounded-2xl bg-emerald-50">
+              <div class="text-2xl font-bold text-emerald-600" id="stat-done">0</div>
+              <div class="text-xs text-slate-500 mt-1">Réalisées</div>
+            </div>
+            <div class="text-center p-4 rounded-2xl bg-softpink-50">
+              <div class="text-2xl font-bold text-softpink-500" id="stat-remaining">0</div>
+              <div class="text-xs text-slate-500 mt-1">Restantes</div>
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-center">
+          <div class="relative w-36 h-36">
+            <svg class="w-full h-full -rotate-90" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="54" fill="none" stroke="#e2e8f0" stroke-width="10"/>
+              <circle id="progress-circle" cx="60" cy="60" r="54" fill="none" stroke="url(#grad)" stroke-width="10" stroke-linecap="round" stroke-dasharray="339.3" stroke-dashoffset="339.3"/>
+              <defs><linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#0369a1"/></linearGradient></defs>
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+              <span class="text-2xl font-bold text-slate-900" id="progress-pct">0%</span>
+              <span class="text-xs text-slate-500">complété</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="pack-info" class="bg-gradient-to-r from-primary-600 to-primary-800 rounded-2xl p-5 text-white mb-8 hidden">
+      <div class="flex items-center justify-between">
+        <div><div class="text-sm text-primary-100">Votre pack actuel</div><div class="font-semibold text-lg" id="pack-label">—</div></div>
+        <div class="text-right"><div class="text-sm text-primary-100">Service</div><div class="font-medium" id="service-label">—</div></div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-3xl shadow-lg border border-slate-100 p-6 md:p-8">
+      <h2 class="font-semibold text-lg text-slate-900 mb-5">Historique des séances</h2>
+      <div id="sessions-list" class="space-y-3">
+        <p class="text-sm text-slate-400 text-center py-8">Aucune séance enregistrée pour le moment.</p>
+      </div>
+    </div>
+
+    <div class="mt-8 text-center">
+      <a href="../rdv.html" class="inline-flex items-center gap-2 text-primary-600 font-medium text-sm hover:underline">Demander un nouveau rendez-vous →</a>
+    </div>
+  </main>
+
+  <script src="../js/api.js"></script>
+  <script>
+    const patientId = localStorage.getItem('current_patient_id');
+    if (!patientId) window.location.href = 'login.html';
+
+    async function load() {
+      try {
+        const fresh = await API.getPatient(patientId);
+        document.getElementById('patient-name').textContent = fresh.prenom + ' ' + fresh.nom;
+        document.getElementById('greet-name').textContent = fresh.prenom;
+        document.getElementById('stat-total').textContent = fresh.totalSessions || 0;
+        document.getElementById('stat-done').textContent = fresh.completedSessions || 0;
+        document.getElementById('stat-remaining').textContent = fresh.remainingSessions || 0;
+
+        const pct = fresh.totalSessions > 0 ? Math.round((fresh.completedSessions / fresh.totalSessions) * 100) : 0;
+        document.getElementById('progress-pct').textContent = pct + '%';
+        document.getElementById('progress-circle').style.strokeDashoffset = 339.3 - (339.3 * pct / 100);
+
+        if (fresh.pack) {
+          document.getElementById('pack-info').classList.remove('hidden');
+          document.getElementById('pack-label').textContent = 'Pack ' + fresh.pack + ' séances';
+          document.getElementById('service-label').textContent = fresh.service || '—';
+        }
+
+        const list = document.getElementById('sessions-list');
+        if (fresh.sessions && fresh.sessions.length > 0) {
+          list.innerHTML = fresh.sessions.map((s, i) => `
+            <div class="flex items-center gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
+              <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-semibold text-sm">${i+1}</div>
+              <div class="flex-1">
+                <div class="font-medium text-slate-800 text-sm">${s.date || 'Séance réalisée'}</div>
+                <div class="text-xs text-slate-500">${s.note || 'Séance de kinésithérapie'}</div>
+              </div>
+              <svg class="w-5 h-5 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+            </div>
+          `).join('');
+        }
+      } catch (e) {
+        alert('Erreur de chargement. Reconnectez-vous.');
+        window.location.href = 'login.html';
+      }
+    }
+
+    document.getElementById('logout-btn').addEventListener('click', () => {
+      localStorage.removeItem('current_patient_id');
+      window.location.href = 'login.html';
+    });
+
+    load();
+  </script>
+</body>
+</html>
